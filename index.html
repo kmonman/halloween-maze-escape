@@ -1168,6 +1168,7 @@
       linear-gradient(180deg,#150925 0%,#10061d 30%,#0b0415 59%,#06020c 82%,#030005 100%);
   }
   #app:has(#screen-game.active){
+    touch-action:none;
     background:
       radial-gradient(ellipse at 50% -5%,rgba(126,33,236,.24) 0%,rgba(74,25,126,.1) 31%,transparent 52%),
       radial-gradient(circle at 92% 67%,rgba(195,75,255,.13),transparent 43%),
@@ -1722,6 +1723,25 @@
   /* ===================== CONFIG ===================== */
   const SHAPE_DEFS = {
     open:    {glyph:null,  name:'Open Field'},
+    crooked: {type:'creative', kind:'crooked', name:'Crooked Hollow'},
+    crescent:{type:'creative', kind:'crescent',name:'Crescent Moon'},
+    hourglass:{type:'creative',kind:'hourglass',name:'Hourglass'},
+    webburst:{type:'creative',kind:'webburst',name:'Spiderweb Burst'},
+    keyhole: {type:'creative', kind:'keyhole', name:'Keyhole Crypt'},
+    twins:   {type:'creative', kind:'twins',   name:'Twin Tombs'},
+    crypt:   {type:'creative', kind:'crypt',   name:'Crooked Crypt'},
+    leaf:    {type:'creative', kind:'leaf',    name:'Fallen Leaf'},
+    clover:  {type:'creative', kind:'clover',  name:'Four Chambers'},
+    eclipse: {type:'creative', kind:'eclipse', name:'Eclipse Ring'},
+    serpent: {type:'creative', kind:'serpent', name:'Serpent Run'},
+    spiral:  {type:'creative', kind:'spiral',  name:'Witch Spiral'},
+    cauldron:{type:'creative', kind:'cauldron',name:'Cauldron Bowl'},
+    skullMask:{type:'creative',kind:'skull',   name:'Skull Keep'},
+    batwing: {type:'creative', kind:'batwing', name:'Bat-Wing Halls'},
+    gauntlet:{type:'creative', kind:'gauntlet',name:'Sorcerer Gauntlet'},
+    trident: {type:'creative', kind:'trident', name:'Three-Pronged Vault'},
+    labyrinth:{type:'creative',kind:'labyrinth',name:'Broken Labyrinth'},
+    finalHex:{type:'creative', kind:'finalHex', name:'Final Hex'},
     A:       {glyph:'A',   name:'Letter A',   type:'letter'},
     B:       {glyph:'B',   name:'Letter B',   type:'letter'},
     O:       {glyph:'O',   name:'Letter O',   type:'letter'},
@@ -1742,10 +1762,10 @@
   const DIFFICULTIES = {
     easy:   { label:'Easy',   braid:0.15, aspect:1.55, targets:[32,46,60,74,88,102,116,130,145,160],
               shapes:['open','open','open','open','open','open','open','open','open','open'] },
-    medium: { label:'Medium', braid:0.05, aspect:1.15, targets:[120,160,200,240,280,320,360,400,450,500],
-              shapes:['open','open','open','open','open','open','open','open','open','open'] },
-    hard:   { label:'Hard',   braid:0.00, aspect:0.8,  targets:[220,300,380,460,540,620,700,780,860,950],
-              shapes:['open','open','open','open','open','open','open','open','open','open'] }
+    medium: { label:'Medium', braid:0.08, aspect:1.15, targets:[120,160,200,240,280,320,360,400,450,500],
+              shapes:['crooked','crescent','hourglass','webburst','keyhole','twins','crypt','leaf','clover','eclipse'] },
+    hard:   { label:'Hard',   braid:0.14, aspect:0.8,  targets:[220,300,380,460,540,620,700,780,860,950],
+              shapes:['serpent','spiral','cauldron','eclipse','skullMask','batwing','gauntlet','trident','labyrinth','finalHex'] }
   };
   const COLORS = {
     bgInactive:'#090322', floor:'#26105a',
@@ -1771,7 +1791,7 @@
   };
   const BACKTRACK_FADE_MS = 500;
   const MAZE_MARGIN = 16;
-  const STORAGE_KEY = 'spookyMazeProgress_v1';
+  const STORAGE_KEY = 'spookyMazeProgress_v2_initialLocks';
   const DIRS = { N:{dx:0,dy:-1,o:'S'}, E:{dx:1,dy:0,o:'W'}, S:{dx:0,dy:1,o:'N'}, W:{dx:-1,dy:0,o:'E'} };
 
   const GOAL_IMG = new Image();
@@ -1882,7 +1902,95 @@
   }
 
   /* ===================== SHAPE MASK ===================== */
+  function buildCreativeMask(kind, cols, rows){
+    const mask=Array.from({length:rows},()=>new Array(cols).fill(false));
+    const ellipse=(x,y,cx,cy,rx,ry)=>((x-cx)/rx)**2+((y-cy)/ry)**2<=1;
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        const x=((c+.5)/cols)*2-1, y=((r+.5)/rows)*2-1;
+        const radius=Math.hypot(x,y), angle=Math.atan2(y,x);
+        let on=false;
+        switch(kind){
+          case 'crooked': {
+            const edge=.76-.1*Math.sin(y*Math.PI*3)-.06*Math.sin(y*Math.PI*7);
+            on=Math.abs(y)<.94&&Math.abs(x)<edge&&!(x>.22&&x<.9&&y>-.57&&y<-.36);
+            break;
+          }
+          case 'crescent':
+            on=ellipse(x,y,-.04,0,.94,.96)&&!ellipse(x,y,.38,-.03,.58,.66);
+            break;
+          case 'hourglass':
+            on=Math.abs(y)<.95&&Math.abs(x)<.34+.48*Math.abs(y);
+            break;
+          case 'webburst':
+            on=radius<.8+.09*Math.sin(angle*8)+.035*Math.sin(angle*16);
+            break;
+          case 'keyhole':
+            on=ellipse(x,y,0,-.38,.66,.56)||(y>-.36&&y<.94&&Math.abs(x)<.25+.13*(y+.36));
+            break;
+          case 'twins':
+            on=ellipse(x,y,-.43,-.12,.52,.7)||ellipse(x,y,.43,.1,.52,.7)||(Math.abs(x)<.28&&Math.abs(y)<.28);
+            break;
+          case 'crypt':
+            on=(y>-.68&&y<.86&&Math.abs(x)<.73-.2*Math.max(0,-y))||(y<=-.68&&y>-.9&&Math.abs(x)<.36);
+            break;
+          case 'leaf': {
+            const lx=x+y*.32;
+            on=(lx/.68)**2+(y/.95)**2<1&&!(x<-.55&&y>.42);
+            break;
+          }
+          case 'clover':
+            on=ellipse(x,y,-.38,-.38,.48,.48)||ellipse(x,y,.38,-.38,.48,.48)||ellipse(x,y,-.38,.38,.48,.48)||ellipse(x,y,.38,.38,.48,.48)||radius<.38;
+            break;
+          case 'eclipse':
+            on=(radius<.92&&radius>.28)||(Math.abs(x)<.16&&Math.abs(y)<.52);
+            break;
+          case 'serpent': {
+            const center=.34*Math.sin((y+1)*Math.PI*1.55);
+            on=Math.abs(y)<.95&&Math.abs(x-center)<.45;
+            break;
+          }
+          case 'spiral': {
+            for(let i=0;i<=72&&!on;i++){
+              const t=i/72*Math.PI*4.6, sr=.1+.058*t;
+              const sx=sr*Math.cos(t), sy=sr*Math.sin(t);
+              on=Math.hypot(x-sx,y-sy)<.27;
+            }
+            break;
+          }
+          case 'cauldron':
+            on=(ellipse(x,y,0,.12,.78,.72)&&y>-.35)||(Math.abs(y+.4)<.12&&Math.abs(x)<.9)||ellipse(x,y,-.82,-.02,.2,.34)||ellipse(x,y,.82,-.02,.2,.34);
+            break;
+          case 'skull':
+            on=ellipse(x,y,0,-.22,.78,.7)||(y>.18&&y<.9&&Math.abs(x)<.48)||(y>.66&&Math.abs(x)<.67);
+            break;
+          case 'batwing':
+            on=ellipse(x,y,0,.02,.28,.88)||ellipse(x,y,-.5,-.05,.58,.48)||ellipse(x,y,.5,-.05,.58,.48)||(Math.abs(x)>.52&&Math.abs(y)<.22);
+            break;
+          case 'gauntlet':
+            on=ellipse(x,y,-.48,-.52,.48,.4)||ellipse(x,y,.38,-.05,.5,.43)||ellipse(x,y,-.4,.52,.52,.42)||(Math.abs(x+y*.65)<.2&&Math.abs(y)<.72);
+            break;
+          case 'trident':
+            on=(Math.abs(x)<.26&&y>-.82&&y<.92)||(Math.abs(x)<.78&&y>-.24&&y<.08)||(Math.abs(x)<.24&&y<-.15)||(Math.abs(x-.58)<.21&&y<.08)||(Math.abs(x+.58)<.21&&y<.08);
+            break;
+          case 'labyrinth': {
+            const edge=.86-.11*Math.sin(y*Math.PI*4)+.04*Math.sin(x*Math.PI*5);
+            const notch=(x>.18&&y<-.34&&y>-.64)||(x<-.16&&y>.28&&y<.54);
+            on=Math.abs(y)<.94&&Math.abs(x)<edge&&!notch;
+            break;
+          }
+          case 'finalHex':
+            on=Math.abs(y)<.94&&Math.abs(x)<.9-.38*Math.abs(y)&&!(radius<.2&&x>.02);
+            break;
+        }
+        mask[r][c]=on;
+      }
+    }
+    return mask;
+  }
+
   function buildMask(shape, cols, rows){
+    if(shape.type==='creative') return buildCreativeMask(shape.kind,cols,rows);
     const s = 8;
     const w = cols*s, h = rows*s;
     const off = document.createElement('canvas');
@@ -2037,6 +2145,47 @@
     return { start:a, end:b, par: r2.dist[idx(b.c,b.r)] };
   }
 
+  function routeQuality(cells, cols, rows, start, end){
+    const idx=(c,r)=>r*cols+c;
+    const parent=new Array(cells.length).fill(-1);
+    const queue=[start]; let qi=0;
+    const startIndex=idx(start.c,start.r), endIndex=idx(end.c,end.r);
+    parent[startIndex]=startIndex;
+    while(qi<queue.length && parent[endIndex]===-1){
+      const cur=queue[qi++];
+      for(const key of ['N','E','S','W']){
+        if(cur.walls[key]) continue;
+        const d=DIRS[key], nx=cur.c+d.dx, ny=cur.r+d.dy;
+        if(nx<0||ny<0||nx>=cols||ny>=rows) continue;
+        const ni=idx(nx,ny), next=cells[ni];
+        if(!next.active||parent[ni]!==-1) continue;
+        parent[ni]=idx(cur.c,cur.r); queue.push(next);
+      }
+    }
+    const route=[];
+    for(let at=endIndex; at!==-1; at=parent[at]){
+      route.push(cells[at]);
+      if(at===startIndex) break;
+    }
+    route.reverse();
+    let turns=0, straight=1, longestStraight=1, boundary=0, longestBoundary=0, lastDir='';
+    const isBoundary=cell=>['N','E','S','W'].some(key=>{
+      const d=DIRS[key], nx=cell.c+d.dx, ny=cell.r+d.dy;
+      return nx<0||ny<0||nx>=cols||ny>=rows||!cells[idx(nx,ny)].active;
+    });
+    for(let i=0;i<route.length;i++){
+      if(isBoundary(route[i])) boundary++; else boundary=0;
+      longestBoundary=Math.max(longestBoundary,boundary);
+      if(i===0) continue;
+      const dx=route[i].c-route[i-1].c, dy=route[i].r-route[i-1].r;
+      const dir=dx ? (dx>0?'E':'W') : (dy>0?'S':'N');
+      if(lastDir&&dir!==lastDir){ turns++; straight=1; }
+      else if(lastDir){ straight++; }
+      lastDir=dir; longestStraight=Math.max(longestStraight,straight);
+    }
+    return route.length*1.5+turns*4-longestStraight*8-longestBoundary*6;
+  }
+
   function pruneToSparseMaze(cells, cols, rows, start, end, rng, offshootCount){
     const idx=(c,r)=>r*cols+c;
     const parent = new Array(cells.length).fill(null);
@@ -2166,17 +2315,18 @@
   function buildLevel(diffKey, levelNum){
     const diff = DIFFICULTIES[diffKey];
     const shapeInfo = SHAPE_DEFS[diff.shapes[levelNum-1]];
-    const rng = mulberry32(hashSeed(diffKey+'-'+levelNum+'-v1'));
+    const baseSeed = hashSeed(diffKey+'-'+levelNum+'-v3-winding');
     // Hard 1 keeps the larger, highly connected layout so players have many
     // route choices and worthwhile pickup detours instead of one funnel.
     const target = diffKey==='hard'&&levelNum===1 ? 224 : diff.targets[levelNum-1];
 
     let cols, rows, mask;
-    if(!shapeInfo.glyph){
+    if(shapeInfo.type!=='creative'&&!shapeInfo.glyph){
       [cols, rows] = sizeForCount(target, diff.aspect);
       mask = Array.from({length:rows},()=>new Array(cols).fill(true));
     } else {
-      [cols, rows] = sizeForCount(Math.round(target/0.4), diff.aspect);
+      const expectedFill=shapeInfo.type==='creative'?.62:.4;
+      [cols, rows] = sizeForCount(Math.round(target/expectedFill), diff.aspect);
       let largest, size;
       for(let tries=0; tries<6; tries++){
         const raw = buildMask(shapeInfo, cols, rows);
@@ -2188,18 +2338,32 @@
       mask = (size >= target*0.35) ? largest : Array.from({length:rows},()=>new Array(cols).fill(true));
     }
 
-    const cells = generateMaze(cols, rows, mask, rng);
-    // Heavily braid Hard 1 to turn most dead ends into loops and alternate
-    // routes. It remains a maze, but nearly every region has an escape option.
-    braidMaze(cells, cols, rows, diffKey==='hard'&&levelNum===1 ? 0.68 : diff.braid, rng);
-    const {start, end, par} = findStartEnd(cells, cols, rows);
+    // Try several deterministic carvings for shaped Medium/Hard boards and keep
+    // the most winding route. This prevents an easy straight climb along an
+    // outside edge while preserving generous corridor width and route choices.
+    const attempts=diffKey==='easy'?1:12;
+    let cells=null, start=null, end=null, par=0, bestScore=-Infinity, layoutRng=null;
+    for(let attempt=0;attempt<attempts;attempt++){
+      const candidateRng=mulberry32((baseSeed+Math.imul(attempt+1,0x9e3779b1))>>>0);
+      const candidate=generateMaze(cols,rows,mask,candidateRng);
+      // A modest braid adds alternate routes without opening a shortcut straight
+      // through the board (the former Hard 1 value of .68 was far too open).
+      const braid=diffKey==='hard'&&levelNum===1 ? .26 : diff.braid;
+      braidMaze(candidate,cols,rows,braid,candidateRng);
+      const points=findStartEnd(candidate,cols,rows);
+      const score=routeQuality(candidate,cols,rows,points.start,points.end);
+      if(score>bestScore){
+        bestScore=score; cells=candidate; start=points.start; end=points.end; par=points.par; layoutRng=candidateRng;
+      }
+    }
 
     if(diff.sparse){
       const offshootCount = 3 + Math.round((levelNum-1)/9 * 4);
-      pruneToSparseMaze(cells, cols, rows, start, end, rng, offshootCount);
+      pruneToSparseMaze(cells, cols, rows, start, end, layoutRng, offshootCount);
     }
 
-    const adventure=createAdventureElements(cells,cols,rows,start,end,diffKey,levelNum,rng);
+    const adventureRng=mulberry32(hashSeed(diffKey+'-'+levelNum+'-v3-items'));
+    const adventure=createAdventureElements(cells,cols,rows,start,end,diffKey,levelNum,adventureRng);
     const startDistances=bfs(cells,cols,rows,start).dist;
     return {
       cols, rows, cells, start, end, par,
@@ -3162,8 +3326,13 @@
 
   canvas.addEventListener('contextmenu', e=>e.preventDefault());
   const gameStageEl=document.getElementById('gameStage');
-  gameStageEl.addEventListener('pointerdown',e=>{
+  const appEl=document.getElementById('app');
+  appEl.addEventListener('pointerdown',e=>{
     if(currentScreen!=='screen-game'||!running||winPending||e.target.closest('button'))return;
+    const canvasRect=canvas.getBoundingClientRect();
+    const inGameStage=gameStageEl.contains(e.target);
+    const belowMaze=e.clientY>=canvasRect.bottom;
+    if(!inGameStage&&!belowMaze)return;
     boostPointer=true;e.preventDefault();
   });
   window.addEventListener('pointerup',()=>{boostPointer=false;});
